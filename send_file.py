@@ -1,25 +1,49 @@
-# send_file.py
 import os
 import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 from dotenv import load_dotenv
 
+# load env vars (FB_USER, FB_PASS वगैरह future में काम आएंगे)
 load_dotenv()
 
-FB_USER = os.getenv("FB_USER")
-FB_PASS = os.getenv("FB_PASS")
-TARGET_ID = os.getenv("TARGET_ID")
 FILE_PATH = "file.txt"
 
-if not FB_USER or not FB_PASS:
-    print("FB_USER/FB_PASS missing. Use .env or set env vars.")
-    exit(1)
-
+# File पढ़ो
 with open(FILE_PATH, "r", encoding="utf-8") as f:
     lines = [l.strip() for l in f if l.strip()]
 
-print(f"Will send {len(lines)} lines to target {TARGET_ID} (demo run).")
-for i, line in enumerate(lines, 1):
-    print(f"{i}: {line}")
-    time.sleep(1)
+print(f"[INFO] Loaded {len(lines)} lines from file.txt")
 
-print("Demo complete.")
+# Chrome options
+chrome_options = Options()
+chrome_options.add_argument("--headless=new")  # headless mode
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--window-size=1920x1080")
+
+# Render पर chromium install होगा, उसका path fixed होता है
+service = Service("/usr/bin/chromedriver")
+
+# Driver start
+driver = webdriver.Chrome(service=service, options=chrome_options)
+
+try:
+    for i, line in enumerate(lines, 1):
+        print(f"[INFO] Searching: {line}")
+        driver.get("https://www.google.com")
+        time.sleep(2)
+
+        search_box = driver.find_element(By.NAME, "q")
+        search_box.send_keys(line)
+        search_box.submit()
+
+        time.sleep(2)
+        print(f"[DONE] Line {i}: searched '{line}'")
+
+finally:
+    driver.quit()
+    print("[INFO] Browser closed. Script finished.")
