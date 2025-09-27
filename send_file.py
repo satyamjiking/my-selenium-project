@@ -1,37 +1,29 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import time
-import os
 
-# ===== Chrome Options =====
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
+def main():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
 
-# Binary location set karna zaroori hai (Render ke liye)
-chrome_options.binary_location = "/usr/bin/chromium-browser"
+    # chromium binary का path
+    chrome_options.binary_location = "/usr/bin/chromium"
 
-# ===== Chrome Service =====
-service = Service("/usr/bin/chromedriver")
-driver = webdriver.Chrome(service=service, options=chrome_options)
+    # chromedriver का path
+    service = Service("/usr/bin/chromedriver")
 
-# ===== Example Logic =====
-try:
-    driver.get("https://www.google.com")
-    print("Page Title:", driver.title)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
 
-    # agar env se user / pass lena ho
-    fb_user = os.getenv("FB_USER")
-    fb_pass = os.getenv("FB_PASS")
+    try:
+        driver.get("https://www.google.com")
+        print("✅ Browser opened successfully")
+        print("Page Title:", driver.title)
+        time.sleep(3)
+    finally:
+        driver.quit()
 
-    # just test ke liye print
-    print("FB_USER:", fb_user)
-    print("FB_PASS:", fb_pass)
-
-    time.sleep(3)
-
-finally:
-    driver.quit()
+if __name__ == "__main__":
+    main()
