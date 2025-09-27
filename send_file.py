@@ -17,7 +17,8 @@ chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+service = Service("/usr/bin/chromedriver")
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # ===== Facebook Login =====
 driver.get("https://mbasic.facebook.com/")
