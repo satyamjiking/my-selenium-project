@@ -1,107 +1,54 @@
-# send_file.py
 import os
 import time
-import random
-from dotenv import load_dotenv
-
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Load env vars (locally .env or Render env vars)
-load_dotenv()
-FB_USER = os.getenv("FB_USER")
-FB_PASS = os.getenv("FB_PASS")
-TARGET_ID = os.getenv("TARGET_ID", "")
-FILE_PATH = "file.txt"
+# ===== Environment Variables =====
+FB_ID = os.getenv("FB_ID")
+FB_P = os.getenv("FB_P")
+TARGET_ID = os.getenv("TARGET_ID")   # group id ya user id
 
-if not (FB_USER and FB_PASS and TARGET_ID):
-    print("[ERROR] FB_USER / FB_PASS / TARGET_ID missing in environment.")
-    exit(1)
-
-# Read lines from file.txt
-if not os.path.exists(FILE_PATH):
-    print(f"[ERROR] {FILE_PATH} not found.")
-    exit(1)
-
-with open(FILE_PATH, "r", encoding="utf-8") as f:
-    messages = [line.strip() for line in f if line.strip()]
-
-print(f"[INFO] Loaded {len(messages)} messages")
-
-# Test limit: भेजने से पहले safety के लिए सिर्फ पहला N lines भेजेगा
-MAX_TEST = 2
-messages = messages[:MAX_TEST]
-
-# Chrome headless options
+# ===== Selenium Chrome Options =====
 chrome_options = Options()
-chrome_options.add_argument("--headless=new")
+chrome_options.add_argument("--headless")  
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--window-size=1920,1080")
-# optional minor anti-detect flags (still detectable)
-chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-chrome_options.add_experimental_option('useAutomationExtension', False)
 
-# Start Chrome with webdriver-manager (downloads matching chromedriver)
-service = Service(ChromeDriverManager().install())
-driver = webdriver.Chrome(service=service, options=chrome_options)
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
-try:
-    # 1) Login to Facebook
-    print("[INFO] Opening Facebook login...")
-    driver.get("https://www.facebook.com/login")
-    time.sleep(3)
+# ===== Facebook Login =====
+driver.get("https://mbasic.facebook.com/")
 
-    email = driver.find_element(By.ID, "email")
-    pwd = driver.find_element(By.ID, "pass")
-    email.clear(); email.send_keys(FB_USER)
-    pwd.clear(); pwd.send_keys(FB_PASS)
-    pwd.send_keys(Keys.RETURN)
-    print("[INFO] Submitted login form, waiting...")
-    time.sleep(6)  # wait for login
+# Login
+driver.find_element(By.NAME, "email").send_keys(FB_ID)
+driver.find_element(By.NAME, "pass").send_keys(FB_P)
+driver.find_element(By.NAME, "login").click()
 
-    # optional: check if login succeeded (simple url check)
-    if "login" in driver.current_url.lower():
-        print("[WARN] Still on login page — possible checkpoint/2FA. Check manually.")
-    else:
-        print("[INFO] Login appears successful. Current URL:", driver.current_url)
+time.sleep(3)
 
-    # 2) Open target chat (group or user)
-    chat_url = f"https://www.facebook.com/messages/t/{TARGET_ID}"
-    print(f"[INFO] Opening chat: {chat_url}")
-    driver.get(chat_url)
-    time.sleep(6)
+# ===== Target Chat Open =====
+chat_url = f"https://mbasic.facebook.com/messages/t/{TARGET_ID}"
+driver.get(chat_url)
 
-    # 3) Find message input box and send messages
-    # Note: Facebook markup can change; try a few locators
-    for i, msg in enumerate(messages, start=1):
-        try:
-            # Try common contenteditable textbox locators
-            try:
-                box = driver.find_element(By.XPATH, "//div[@contenteditable='true' and @role='textbox']")
-            except:
-                box = driver.find_element(By.XPATH, "//div[@contenteditable='true']")
+time.sleep(3)
 
-            # Click, send message and Enter
-            box.click()
-            # small typing simulation
-            for ch in msg:
-                box.send_keys(ch)
-                time.sleep(0.01)
-            box.send_keys(Keys.RETURN)
+# ===== Read File =====
+with open("file.txt", "r", encoding="utf-8") as f:
+    lines = f.readlines()
 
-            print(f"[SENT] {i}/{len(messages)}: {msg[:40]}...")
-            # human-like delay
-            time.sleep(3 + random.random()*2)
-        except Exception as e:
-            print(f"[ERROR] Sending message {i} failed: {e}")
-            time.sleep(5)
+# ===== Send Messages One by One =====
+for line in lines:
+    msg_box = driver.find_element(By.NAME, "body")
+    msg_box.clear()
+    msg_box.send_keys(line.strip())
 
-finally:
-    print("[INFO] Finished. Quitting browser.")
-    driver.quit()
+    send_btn = driver.find_element(By.NAME, "send")
+    send_btn.click()
+
+    print(f"Sent: {line.strip()}")
+    time.sleep(40)   # 40 second delay
+
+driver.quit()
